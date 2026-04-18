@@ -1,9 +1,10 @@
 from mlx_lm import load, generate
 
+model_name = "mlx-community/Llama-3.2-3B-Instruct-4bit"
 
 def main():
     print("Loading model (will download ~2GB on first run)...")
-    model, tokenizer = load("mlx-community/Llama-3.2-3B-Instruct-4bit")
+    model, tokenizer = load(model_name)
 
     prompt = "What is MLX?"
     print(f"\nPrompt: {prompt}\n")
