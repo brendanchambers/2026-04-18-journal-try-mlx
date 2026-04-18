@@ -10,7 +10,7 @@ from resource_monitor import ResourceMonitor
 # Configuration Variables
 # ============================================================================
 MODEL_NAME = "mlx-community/Llama-3.2-3B-Instruct-4bit"
-PROMPT = "What is MLX?"
+PROMPT = "Please write this emoji: a woman firefighter. Do not write any other text. Remember: you will need to use unicode joining."
 MAX_TOKENS = 512
 
 # ============================================================================
