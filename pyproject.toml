@@ -7,4 +7,5 @@ requires-python = ">=3.11"
 dependencies = [
     "mlx-lm>=0.12.0",
     "psutil>=5.9.0",
+    "rich>=13.0.0",
 ]

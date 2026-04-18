@@ -1,70 +1,71 @@
-import time
-import psutil
+"""Minimal MLX language model example with performance monitoring."""
+
 from mlx_lm import load, stream_generate
+from rich.console import Console
+from rich.panel import Panel
 
+from resource_monitor import ResourceMonitor
 
-def get_memory_usage_mb():
-    """Get current process memory usage in MB."""
-    process = psutil.Process()
-    return process.memory_info().rss / 1024 / 1024
+# ============================================================================
+# Configuration Variables
+# ============================================================================
+MODEL_NAME = "mlx-community/Llama-3.2-3B-Instruct-4bit"
+PROMPT = "What is MLX?"
+MAX_TOKENS = 512
+
+# ============================================================================
+# Main Program
+# ============================================================================
 
 
 def main():
-    print("Loading model (will download ~2GB on first run)...")
-    initial_memory = get_memory_usage_mb()
+    console = Console()
+    monitor = ResourceMonitor()
 
-    model, tokenizer = load("mlx-community/Llama-3.2-3B-Instruct-4bit")
-    model_loaded_memory = get_memory_usage_mb()
+    # Initialize monitoring
+    monitor.record_initial()
 
-    prompt = "What is MLX?"
-    print(f"\nPrompt: {prompt}\n")
-
-    # Format as chat message
-    messages = [{"role": "user", "content": prompt}]
-    formatted_prompt = tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=False
+    # Load model
+    console.print(
+        Panel.fit(
+            f"Loading model: [cyan]{MODEL_NAME}[/cyan]\n"
+            "(will download ~2GB on first run)",
+            title="MLX Demo",
+            border_style="blue",
+        )
     )
 
-    # Track generation statistics
-    token_count = 0
-    first_token_time = None
-    start_time = time.time()
+    model, tokenizer = load(MODEL_NAME)
+    monitor.record_model_loaded()
 
-    print("Response: ", end="", flush=True)
+    # Display prompt
+    console.print()
+    console.print(f"[bold blue]Prompt:[/bold blue] {PROMPT}")
+    console.print()
 
-    # Stream tokens and track timing
-    for token in stream_generate(model, tokenizer, prompt=formatted_prompt, max_tokens=100):
-        if token_count == 0:
-            first_token_time = time.time()
-        print(token.text, end="", flush=True)
-        token_count += 1
+    # Format as chat message
+    messages = [{"role": "user", "content": PROMPT}]
+    formatted_prompt = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=False
+    )
 
-    end_time = time.time()
-    final_memory = get_memory_usage_mb()
+    # Generate response with streaming
+    console.print("[bold green]Response:[/bold green] ", end="")
+    monitor.start_generation()
 
-    # Calculate statistics
-    total_time = end_time - start_time
-    time_to_first_token = first_token_time - start_time if first_token_time else 0
-    tokens_per_second = token_count / total_time if total_time > 0 else 0
+    for token in stream_generate(model, tokenizer, prompt=formatted_prompt, max_tokens=MAX_TOKENS):
+        if monitor.token_count == 0:
+            monitor.record_first_token()
+        console.print(token.text, end="", highlight=False)
+        monitor.record_token()
+
+    monitor.end_generation()
+    console.print("\n")
 
     # Display statistics
-    print("\n")
-    print("=" * 60)
-    print("PERFORMANCE STATISTICS")
-    print("=" * 60)
-    print(f"Memory Usage (initial):        {initial_memory:>10.2f} MB")
-    print(f"Memory Usage (model loaded):   {model_loaded_memory:>10.2f} MB")
-    print(f"Memory Usage (after gen):      {final_memory:>10.2f} MB")
-    print(f"Memory Increase (model):       {model_loaded_memory - initial_memory:>10.2f} MB")
-    print("-" * 60)
-    print(f"Time to First Token:           {time_to_first_token:>10.3f} seconds")
-    print(f"Total Generation Time:         {total_time:>10.3f} seconds")
-    print(f"Tokens Generated:              {token_count:>10} tokens")
-    print(f"Mean Tokens per Second:        {tokens_per_second:>10.2f} tok/s")
-    print("=" * 60)
+    monitor.display_statistics()
 
 
 if __name__ == "__main__":
     main()
+
